@@ -33,7 +33,7 @@ class SPSMessengerPusher < SPSSub
     @interval = interval
     Thread.new { subscribe() }
 
-    play @messages
+    play_messages
 
   end
 
@@ -46,32 +46,34 @@ class SPSMessengerPusher < SPSSub
 
   end
 
-  def play(messages=@messages)
+  def play_messages()
 
     @status = :play
     old_message = ''
     
-    messages.cycle.each do |message|
+    @messages.cycle.each do |message|
  
       notice('messenger: ' + message) unless message == old_message
       sleep @interval
-      break if @status == :stop
+      break if @status == :stop or @status == :update
       old_message = message
 
     end
+    
+    play_messages if @status == :update
 
   end
 
   def subscribe(topic: 'messenger/status')
-    messages = @messages
+
     super(topic: topic) do |msg, topic|
 
       case msg.to_sym
 
       when :update
-        @status = :stop
-        messages = fetch_feed()
-        play messages
+        @status = :update
+        @messages = fetch_feed()
+        #play messages
       
       when :stop
 
@@ -79,7 +81,7 @@ class SPSMessengerPusher < SPSSub
 
       when :play
 
-        play
+        play_messages
 
       end
 
