@@ -20,11 +20,11 @@ require 'rss_to_dynarex'
 
 class SPSMessengerPusher < SPSSub
 
-  def initialize(port: '59000', host: nil, feed: nil )
+  def initialize(port: '59210', host: nil, feed: nil )
 
     super(port: port, host: host)
     @feed = feed
-    fetch_feed()
+    @messages = fetch_feed()
 
   end
 
@@ -33,7 +33,7 @@ class SPSMessengerPusher < SPSSub
     @interval = interval
     Thread.new { subscribe() }
 
-    play_messages()
+    play @messages
 
   end
 
@@ -42,33 +42,36 @@ class SPSMessengerPusher < SPSSub
   def fetch_feed()
     
     rtd = RSStoDynarex.new @feed
-    @messages = rtd.to_dynarex.all.map(&:title)
+    rtd.to_dynarex.all.map(&:title)
 
   end
 
-  def play_messages()
+  def play(messages=@messages)
 
     @status = :play
-
-    @messages.cycle.each do |message|
-
-      notice('messenger: ' + message)      
+    old_message = ''
+    
+    messages.cycle.each do |message|
+ 
+      notice('messenger: ' + message) unless message == old_message
       sleep @interval
       break if @status == :stop
+      old_message = message
 
     end
 
   end
 
   def subscribe(topic: 'messenger/status')
-
+    messages = @messages
     super(topic: topic) do |msg, topic|
 
       case msg.to_sym
 
       when :update
-
-        fetch_feed()
+        @status = :stop
+        messages = fetch_feed()
+        play messages
       
       when :stop
 
@@ -76,7 +79,7 @@ class SPSMessengerPusher < SPSSub
 
       when :play
 
-        play_messages
+        play
 
       end
 
