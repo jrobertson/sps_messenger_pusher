@@ -60,8 +60,14 @@ class SPSMessengerPusher < SPSSub
 
     end
     
-    play_messages if @status == :update
-
+    case @status
+    when :update
+      play_messages
+    when :stop
+      sleep 1 until @status == :play
+      play_messages
+    end
+    
   end
 
   def subscribe(topic: 'messenger/status')
@@ -81,7 +87,7 @@ class SPSMessengerPusher < SPSSub
 
       when :play
 
-        play_messages
+        @status = :play
 
       end
 
